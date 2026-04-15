@@ -7,14 +7,7 @@ load_dotenv()
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 
-def evaluate_jd(jd_text: str) -> dict:
-    """
-    JD 품질을 평가하고 점수를 반환
-    """
-
-    if not jd_text:
-        return {"score": 0, "feedback": "No JD provided"}
-
+def evaluate_jd(jd_text: str):
     prompt = f"""
     아래 채용 공고(Job Description)를 평가해라.
 
@@ -37,21 +30,13 @@ def evaluate_jd(jd_text: str) -> dict:
     {jd_text}
     """
 
-    try:
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": "너는 채용 공고를 평가하는 전문가다."},
-                {"role": "user", "content": prompt}
-            ],
-            temperature=0.3
-        )
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": "너는 JD 평가 전문가다."},
+            {"role": "user", "content": prompt}
+        ],
+        temperature=0.2
+    )
 
-        content = response.choices[0].message.content
-
-        # JSON 파싱
-        import json
-        return json.loads(content)
-
-    except Exception as e:
-        return {"score": 0, "feedback": f"Evaluation failed: {e}"}
+    return response.choices[0].message.content
