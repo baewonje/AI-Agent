@@ -7,6 +7,32 @@ load_dotenv()
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
+def summarize_company(info_text):
+    prompt = f"""
+다음 회사 검색 결과를 기반으로 한국어로 정리해줘.
+
+항목:
+- 회사 개요
+- 예상 규모 (직원수)
+- 매출 정보 (있으면)
+- 평균 연봉 (있으면)
+
+반드시 한국어로 짧게 정리해라.
+
+[데이터]
+{info_text}
+"""
+
+    res = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": "너는 기업 분석 전문가다."},
+            {"role": "user", "content": prompt}
+        ],
+        temperature=0.3
+    )
+
+    return res.choices[0].message.content
 
 def generate_jd(content: str, feedback: str = "") -> str:
     """
