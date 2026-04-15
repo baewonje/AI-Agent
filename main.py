@@ -11,10 +11,14 @@ if __name__ == "__main__":
 
     score = 0
     feedback = ""
-    max_iterations = 3
+    max_iterations = 5
+    target_score = 90
+
+    results = []
 
     for i in range(max_iterations):
         print(f"\n[2] JD 생성 중... (시도 {i+1})")
+
         jd = generate_jd(content, feedback)
 
         print("\n[3] JD 평가 중...")
@@ -23,12 +27,14 @@ if __name__ == "__main__":
         score = result["score"]
         feedback = result["feedback"]
 
-        print(f"\n[점수]: {score}")
+        results.append((i+1, score, feedback))
+
+        print(f"[점수]: {score}")
         print(f"[피드백]: {feedback}")
 
-        if score >= 90:
-            print("\n✅ 충분히 좋은 JD 도달!")
-            break
+        if score >= target_score:
+            print("\n✅ 목표 점수 도달!")
+            break   
 
     print("\n======================")
     print("[최종 JD]\n")
