@@ -1,6 +1,9 @@
 import os
+from urllib import response
 from openai import OpenAI
 from dotenv import load_dotenv
+import json
+import re
 
 load_dotenv()
 
@@ -8,6 +11,8 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 
 def evaluate_jd(jd_text: str):
+    
+
     prompt = f"""
     아래 채용 공고(Job Description)를 평가해라.
 
@@ -38,5 +43,12 @@ def evaluate_jd(jd_text: str):
         ],
         temperature=0.2
     )
+    content = response.choices[0].message.content
+    
 
-    return response.choices[0].message.content
+        # JSON만 추출
+    match = re.search(r"\{.*\}", content, re.DOTALL)
+    if match:
+        return json.loads(match.group())
+
+    return {"score": 0, "feedback": "parse error"}
