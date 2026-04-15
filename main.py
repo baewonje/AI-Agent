@@ -11,7 +11,7 @@ if __name__ == "__main__":
 
     score = 0
     feedback = ""
-    max_iterations = 5
+    max_iterations = 3
     target_score = 90
 
     results = []

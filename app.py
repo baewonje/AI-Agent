@@ -4,6 +4,8 @@ from tools.crawler import crawl
 from tools.jd_generator import generate_jd
 from agent.evaluator import evaluate_jd
 import pandas as pd
+from agent.decision import decide_action
+from tools.search import search
 
 st.set_page_config(page_title="AI JD Agent", layout="centered")
 
@@ -30,7 +32,12 @@ if st.button("🚀 분석 시작"):
     feedback = ""
 
     results = []
-    max_iterations  = 5
+    max_iterations  = 3
+    state = {
+        "score": score,
+        "iteration": 0,
+        "content": content[:1000]
+    }
     # 2. Agent Loop
     for i in range(max_iterations):
         status.text(f"🧠 JD 생성 및 개선 중... ({i+1}/{max_iterations})")
@@ -46,7 +53,31 @@ if st.button("🚀 분석 시작"):
         progress.progress(int((i+1) / max_iterations * 100))
         time.sleep(1)  # UX용
 
-        if score >= 90:
+        state["iteration"] = i
+        decision = decide_action(state)
+
+        action = decision["action"]
+        reason = decision["reason"]
+
+        st.info(f"🧠 {action.upper()}")
+        st.caption(reason)
+        decision_log.append((i, action, reason))
+        
+        if action == "search":
+            status.text("🔍 검색 중...")
+
+            search_results = search(url)
+
+            search_context = "\n".join([
+                r["title"] + " " + r["body"]
+                for r in search_results
+            ])
+
+            content += "\n\n[SEARCH]\n" + search_context
+
+
+        elif action == "stop":
+            st.success("Agent 종료 (품질 충분)")
             break
 
     progress.progress(100)
@@ -69,8 +100,6 @@ if st.button("🚀 분석 시작"):
     st.subheader("📈 Score Improvement")
     st.line_chart(df.set_index("Iteration"))
     st.metric(label="최종 점수", value=score)
-    best_score = max(scores)
-    st.metric(label="최고 점수", value=best_score)
 
     # 결과 출력
     st.subheader("📊 개선 과정")
