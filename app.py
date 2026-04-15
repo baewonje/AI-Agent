@@ -61,8 +61,7 @@ if st.button("🚀 분석 시작"):
 
         st.info(f"🧠 {action.upper()}")
         st.caption(reason)
-        decision_log.append((i, action, reason))
-        
+
         if action == "search":
             status.text("🔍 검색 중...")
 
