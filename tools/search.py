@@ -6,9 +6,9 @@ def search(query: str, max_results: int = 5):
     with DDGS() as ddgs:
         for r in ddgs.text(query, max_results=max_results):
             results.append({
-                "title": r["title"],
-                "body": r["body"],
-                "url": r["href"]
+                "title": r.get("title", ""),
+                "body": r.get("body", ""),
+                "url": r.get("href", "")
             })
 
     return results
