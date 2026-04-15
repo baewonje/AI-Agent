@@ -45,7 +45,7 @@ Return ONLY JSON:
     response = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=[
-            {"role": "system", "content": "You are a decision-making agent."},
+            {"role": "system", "content": "너는 한국어로만 답하는 채용 공고 분석 AI다."},
             {"role": "user", "content": prompt}
         ],
         temperature=0

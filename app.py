@@ -6,6 +6,7 @@ from agent.evaluator import evaluate_jd
 import pandas as pd
 from agent.decision import decide_action
 from tools.search import search
+from agent.planner import create_plan
 
 st.set_page_config(page_title="AI JD Agent", layout="centered")
 
@@ -28,32 +29,65 @@ if st.button("🚀 분석 시작"):
     content = crawl(url)
     progress.progress(20)
 
+    # 🔥 1. 회사 정보 추가 (NEW)
+    status.text("🏢 회사 정보 분석 중...")
+
+    company_query = f"{url} 회사 인원수 매출 평균연봉"
+    company_info = search(company_query)
+
+    company_context = "\n".join([
+        f"{r['title']} - {r['body']}"
+        for r in company_info
+    ])
+
+    st.subheader("🏢 회사 정보")
+    st.write(company_context)
+
     score = 0
     feedback = ""
 
     results = []
-    max_iterations  = 3
+    max_iterations = 3
+
     state = {
         "score": score,
-        "iteration": 0,
+        "iteration": 1,
         "content": content[:1000]
     }
+
+    best_score = 0
+    best_jd = ""
+
     # 2. Agent Loop
     for i in range(max_iterations):
         status.text(f"🧠 JD 생성 및 개선 중... ({i+1}/{max_iterations})")
+        state["iteration"] = i
 
-        jd = generate_jd(content, feedback)
+        # 🔥 회사 정보 포함해서 JD 생성
+        jd_input = content + "\n\n[회사 정보]\n" + company_context
+
+        jd = generate_jd(jd_input, feedback)
         result = evaluate_jd(jd)
 
         score = result["score"]
+
+        if score > best_score:
+            best_score = score
+            best_jd = jd
+
+        plan = create_plan(state)
+
+        st.write("📋 Plan")
+        st.write(plan["goal"])
+        st.write(plan["plan"])
+
         feedback = result["feedback"]
 
         results.append((i+1, score, feedback))
 
         progress.progress(int((i+1) / max_iterations * 100))
-        time.sleep(1)  # UX용
+        time.sleep(1)
 
-        state["iteration"] = i
         decision = decide_action(state)
 
         action = decision["action"]
@@ -84,21 +118,19 @@ if st.button("🚀 분석 시작"):
 
     st.success("분석 완료!")
 
-
     # 데이터 준비
     iterations = [r[0] for r in results]
     scores = [r[1] for r in results]
 
-    # 데이터프레임 생성
     df = pd.DataFrame({
         "Iteration": iterations,
         "Score": scores
     })
 
-    # 그래프 출력
     st.subheader("📈 Score Improvement")
     st.line_chart(df.set_index("Iteration"))
-    st.metric(label="최종 점수", value=score)
+
+    st.metric(label="최고 점수", value=best_score)
 
     # 결과 출력
     st.subheader("📊 개선 과정")
@@ -106,5 +138,8 @@ if st.button("🚀 분석 시작"):
         st.write(f"Iteration {r[0]} → Score: {r[1]}")
         st.caption(f"Feedback: {r[2]}")
 
-    st.subheader("📄 최종 JD")
+    st.subheader("🏆 최고 JD (Best Result)")
+    st.write(best_jd)
+
+    st.subheader("📄 최종 JD (Last Result)")
     st.write(jd)

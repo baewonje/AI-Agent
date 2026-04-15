@@ -3,6 +3,7 @@ from tools.jd_generator import generate_jd
 from agent.evaluator import evaluate_jd
 
 
+
 if __name__ == "__main__":
     url = input("URL 입력: ")
 
