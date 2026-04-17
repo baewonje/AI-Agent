@@ -1,20 +1,26 @@
 import streamlit as st
 import time
+import pandas as pd
+
 from tools.crawler import crawl
 from tools.jd_generator import generate_jd, summarize_company
-from agent.evaluator import evaluate_jd
-import pandas as pd
-from agent.decision import decide_action
 from tools.search import search
-from agent.planner import create_plan
+from tools.pdf_parser import extract_text_from_pdf
 
-st.set_page_config(page_title="AI JD Agent", layout="centered")
+from agent.evaluator import evaluate_jd
+from agent.decision import decide_action
+from agent.planner import create_plan
+from agent.matcher import match_resume_to_jd
+from agent.cover_letter import generate_cover_letter
+
+
+st.set_page_config(page_title="AI JD Agent", layout="wide")
 
 st.title("🤖 AI JD Generator Agent")
 st.markdown("URL 하나로 채용 공고를 분석하고 최적의 JD를 생성합니다.")
 
 url = st.text_input("🔗 채용 공고 URL 입력")
-
+uploaded_file = st.file_uploader("📄 이력서 PDF 업로드 (선택)", type=["pdf"])
 
 
 if st.button("🚀 분석 시작"):
@@ -29,11 +35,19 @@ if st.button("🚀 분석 시작"):
     # 1. 크롤링
     status.text("📡 데이터 수집 중...")
     content = crawl(url)
+
+    # 🔥 텍스트 검증
+    if not content or len(content.strip()) < 100:
+        st.error("❌ 텍스트 기반 채용공고만 지원됩니다. 이 페이지는 JavaScript 렌더링이 필요하거나 크롤링에 실패했을 수 있습니다.")
+        st.markdown("**추출된 텍스트 길이:** {}자".format(len(content.strip())))
+        if content:
+            st.code(content[:1000])
+        st.stop()
+
     progress.progress(20)
 
-    # 🔥 1. 회사 정보 추가 (NEW)
+    # 🔥 회사 정보 검색
     status.text("🏢 회사 정보 분석 중...")
-
     company_query = f"{url} 회사 인원수 매출 평균연봉"
     company_info = search(company_query)
 
@@ -42,9 +56,17 @@ if st.button("🚀 분석 시작"):
         for r in company_info
     ])
 
+    company_summary = summarize_company(company_context)
+
+    # 🔥 PDF 있을 경우만 처리
+    if uploaded_file is not None:
+        resume_text = extract_text_from_pdf(uploaded_file)
+        tab1, tab2, tab3 = st.tabs(["📊 직무 분석", "🎯 적합도", "✍️ 자기소개서"])
+    else:
+        tab1 = st.tabs(["📊 직무 분석"])[0]
+
     score = 0
     feedback = ""
-
     results = []
     max_iterations = 3
 
@@ -56,14 +78,12 @@ if st.button("🚀 분석 시작"):
 
     best_score = 0
     best_jd = ""
-    company_summary = summarize_company(company_context)
-    
-    # 2. Agent Loop
+
+    # 🔥 Agent Loop
     for i in range(max_iterations):
         status.text(f"🧠 JD 생성 및 개선 중... ({i+1}/{max_iterations})")
         state["iteration"] = i
 
-        # 🔥 회사 정보 포함해서 JD 생성
         jd_input = content + "\n\n[회사 정보]\n" + company_context
 
         jd = generate_jd(jd_input, feedback)
@@ -74,12 +94,6 @@ if st.button("🚀 분석 시작"):
         if score > best_score:
             best_score = score
             best_jd = jd
-
-        plan = create_plan(state)
-
-        st.write("📋 Plan")
-        st.write(plan["goal"])
-        st.write(plan["plan"])
 
         feedback = result["feedback"]
 
@@ -93,11 +107,10 @@ if st.button("🚀 분석 시작"):
         action = decision["action"]
         reason = decision["reason"]
 
-        st.info(f"🧠 {action.upper()}")
-        st.caption(reason)
+        st.caption(f"🧠 {action.upper()} - {reason}")
 
         if action == "search":
-            status.text("🔍 검색 중...")
+            status.text("🔍 추가 정보 검색 중...")
 
             search_results = search(url)
 
@@ -108,17 +121,13 @@ if st.button("🚀 분석 시작"):
 
             content += "\n\n[SEARCH]\n" + search_context
 
-
         elif action == "stop":
-            st.success("Agent 종료 (품질 충분)")
             break
 
     progress.progress(100)
     status.text("✅ 완료!")
 
-    st.success("분석 완료!")
-
-    # 데이터 준비
+    # 데이터 정리
     iterations = [r[0] for r in results]
     scores = [r[1] for r in results]
 
@@ -127,24 +136,49 @@ if st.button("🚀 분석 시작"):
         "Score": scores
     })
 
-    st.subheader("📈 Score Improvement")
-    st.line_chart(df.set_index("Iteration"))
+    # =========================
+    # 📊 TAB 1: 직무 분석
+    # =========================
+    with tab1:
+        st.subheader("📊 JD 분석")
 
-    st.metric(label="최고 점수", value=best_score)
+        col1, col2, col3 = st.columns(3)
+        col1.metric("최고 점수", best_score)
+        col2.metric("반복 횟수", len(results))
+        col3.metric("최종 점수", scores[-1])
 
-    # 결과 출력
-    st.subheader("📊 개선 과정")
-    for r in results:
-        st.write(f"Iteration {r[0]} → Score: {r[1]}")
-        st.caption(f"Feedback: {r[2]}")
-    
-    
+        st.line_chart(df.set_index("Iteration"))
 
-    st.subheader("🏢 회사 정보")
-    st.write(company_summary)
-    
-    st.subheader("🏆 최고 JD (Best Result)")
-    st.write(best_jd)
+        st.subheader("🏢 회사 정보")
+        st.info(company_summary)
 
-    st.subheader("📄 최종 JD (Last Result)")
-    st.write(jd)
+        st.subheader("🏆 Best JD")
+        st.success(best_jd)
+
+        st.subheader("📊 개선 과정")
+        for r in results:
+            st.write(f"Iteration {r[0]} → Score: {r[1]}")
+            st.caption(f"{r[2]}")
+
+    # =========================
+    # 🎯 TAB 2: 적합도 (PDF 있을 때만)
+    # =========================
+    if uploaded_file is not None:
+        with tab2:
+            st.subheader("🎯 이력서 적합도")
+
+            match_result = match_resume_to_jd(resume_text, best_jd)
+
+            st.metric("적합도", f"{match_result['score']}%")
+            st.info(match_result["reason"])
+            st.warning("개선점: " + match_result["improvement"])
+
+    # =========================
+    # ✍️ TAB 3: 자기소개서
+    # =========================
+    if uploaded_file is not None:
+        with tab3:
+            st.subheader("✍️ 자기소개서")
+
+            cover_letter = generate_cover_letter(resume_text, best_jd)
+            st.write(cover_letter)

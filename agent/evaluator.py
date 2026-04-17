@@ -1,13 +1,6 @@
-import os
-from urllib import response
-from openai import OpenAI
-from dotenv import load_dotenv
 import json
 import re
-
-load_dotenv()
-
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+from utils.openai_utils import create_chat_completion, parse_json_response
 
 
 def evaluate_jd(jd_text: str):
@@ -35,20 +28,13 @@ def evaluate_jd(jd_text: str):
     {jd_text}
     """
 
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
+    content = create_chat_completion(
         messages=[
             {"role": "system", "content": "너는 JD 평가 전문가다."},
             {"role": "user", "content": prompt}
         ],
         temperature=0.2
     )
-    content = response.choices[0].message.content
     
 
-        # JSON만 추출
-    match = re.search(r"\{.*\}", content, re.DOTALL)
-    if match:
-        return json.loads(match.group())
-
-    return {"score": 0, "feedback": "parse error"}
+    return parse_json_response(content, fallback={"score": 0, "feedback": "parse error"})

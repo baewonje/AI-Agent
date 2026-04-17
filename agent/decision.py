@@ -1,21 +1,9 @@
-import os
-from openai import OpenAI
-from dotenv import load_dotenv
 import json
-
-load_dotenv()
-
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+from utils.openai_utils import create_chat_completion, parse_json_response
 
 
-def decide_action(state: dict):
-    """
-    state = {
-        "score": 현재 점수,
-        "iteration": 몇 번째 반복,
-        "content": JD 내용 요약
-    }
-    """
+def decide_action(state: dict) -> dict:
+    """현재 상태를 기반으로 다음 행동을 결정합니다."""
 
     prompt = f"""
 You are an AI agent controller.
@@ -42,8 +30,7 @@ Return ONLY JSON:
 }}
 """
 
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
+    content = create_chat_completion(
         messages=[
             {"role": "system", "content": "너는 한국어로만 답하는 채용 공고 분석 AI다."},
             {"role": "user", "content": prompt}
@@ -51,4 +38,4 @@ Return ONLY JSON:
         temperature=0
     )
 
-    return json.loads(response.choices[0].message.content)
+    return parse_json_response(content, fallback={"action": "stop", "reason": "parsing failed"})
