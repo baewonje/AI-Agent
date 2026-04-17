@@ -1,6 +1,7 @@
 import requests
 from bs4 import BeautifulSoup
 import json
+from utils.logging_utils import logger
 
 
 def fetch_webpage(url: str) -> str:
@@ -14,16 +15,17 @@ def fetch_webpage(url: str) -> str:
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8"
         }
 
-        response = requests.get(url, headers=headers, timeout=10)
+        response = requests.get(url, headers=headers, timeout=15)
 
         if response.status_code != 200:
-            print(f"[ERROR] Failed to fetch page: {response.status_code}")
+            logger.error(f"Failed to fetch page: {response.status_code} for URL: {url}")
             return ""
 
+        logger.info(f"Successfully fetched {len(response.text)} characters from {url}")
         return response.text
 
     except Exception as e:
-        print(f"[ERROR] Exception occurred: {e}")
+        logger.error(f"Exception occurred while fetching {url}: {e}")
         return ""
 
 
@@ -57,7 +59,7 @@ def extract_next_data(soup) -> str:
         return "\n".join(texts)
 
     except Exception as e:
-        print(f"[ERROR] NEXT_DATA parsing failed: {e}")
+        logger.error(f"NEXT_DATA parsing failed: {e}")
         return ""
 
 
@@ -66,12 +68,13 @@ def extract_text(html: str) -> str:
     HTML에서 의미 있는 텍스트만 추출
     """
     try:
+        logger.debug(f"Extracting text from HTML ({len(html)} characters)")
         soup = BeautifulSoup(html, "html.parser")
 
         # 🔥 1️⃣ Next.js 사이트 대응 (핵심)
         next_data_text = extract_next_data(soup)
         if len(next_data_text) > 200:
-            print("[INFO] NEXT.js 데이터 사용")
+            logger.info("Using NEXT.js data extraction")
             return next_data_text
 
         # 🔥 2️⃣ 불필요한 태그 제거
@@ -102,7 +105,7 @@ def extract_text(html: str) -> str:
         return "\n".join(parts)
 
     except Exception as e:
-        print(f"[ERROR] Text extraction failed: {e}")
+        logger.error(f"Text extraction failed: {e}")
         return ""
 
 
@@ -110,18 +113,21 @@ def crawl(url: str) -> str:
     """
     전체 크롤링 파이프라인
     """
+    logger.info(f"Starting crawl for URL: {url}")
     html = fetch_webpage(url)
 
     if not html:
+        logger.warning(f"No HTML content retrieved for {url}")
         return ""
 
     text = extract_text(html)
 
     # 🔥 최종 방어 (너 app.py랑 연결됨)
     if not text or len(text.strip()) < 100:
-        print("[WARNING] Empty or low-quality content")
+        logger.warning(f"Low quality or empty content extracted from {url} (length: {len(text.strip())})")
         return ""
 
+    logger.info(f"Successfully crawled {len(text)} characters from {url}")
     return text
 
 
