@@ -255,10 +255,14 @@ if st.session_state.analysis_started:
             # 자기소개서 생성 버튼
             if st.button("🤖 AI 분석으로 자기소개서 생성", key="generate_cl"):
                 with st.spinner("AI가 이력서를 분석하고 최적의 자기소개서를 생성하는 중..."):
-                    cover_letter, cl_results = generate_cover_letter_with_agent(resume_text, best_jd)
+                    cover_letter, cl_results, resume_strengths = generate_cover_letter_with_agent(resume_text, best_jd)
 
                 # 결과 표시
                 st.success("✅ 최적의 자기소개서가 생성되었습니다!")
+
+                # 이력서 강점 표시
+                st.subheader("💪 너의 강점")
+                st.info(resume_strengths)
 
                 # 평가 결과 요약
                 if cl_results:

@@ -30,9 +30,6 @@ def extract_resume_strengths(resume_text: str) -> str:
 def generate_cover_letter(resume_text: str, jd_text: str, feedback: str = "") -> str:
     """이력서와 JD를 기반으로 고품질 자기소개서를 생성합니다."""
 
-    # 이력서 강점 추출
-    resume_strengths = extract_resume_strengths(resume_text)
-
     prompt = f"""
 이력서와 채용 공고를 기반으로 전문적인 자기소개서를 작성해라.
 
@@ -46,7 +43,6 @@ def generate_cover_letter(resume_text: str, jd_text: str, feedback: str = "") ->
 1. 서론 (150-200자)
    - 인사 및 지원 동기
    - 해당 포지션에 대한 관심 표현
-   - **상단에 이력서 강점 강조: {resume_strengths}**
 
 2. 본론 (500-800자)
    - 관련 경험 및 성과 (구체적인 사례 2-3개)
@@ -84,8 +80,11 @@ def generate_cover_letter(resume_text: str, jd_text: str, feedback: str = "") ->
     )
 
 
-def generate_cover_letter_with_agent(resume_text: str, jd_text: str, max_iterations: int = 3) -> tuple[str, list]:
+def generate_cover_letter_with_agent(resume_text: str, jd_text: str, max_iterations: int = 3) -> tuple[str, list, str]:
     """AI 에이전트 방식으로 자기소개서를 반복 개선합니다."""
+
+    # 이력서 강점 추출
+    resume_strengths = extract_resume_strengths(resume_text)
 
     score = 0
     feedback = ""
@@ -122,4 +121,4 @@ def generate_cover_letter_with_agent(resume_text: str, jd_text: str, max_iterati
         if action == "stop" or score >= 90:
             break
 
-    return best_cover_letter, results
+    return best_cover_letter, results, resume_strengths
