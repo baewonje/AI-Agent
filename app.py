@@ -16,10 +16,21 @@ from agent.cover_letter import generate_cover_letter_with_agent
 
 st.set_page_config(page_title="AI JD Agent", layout="wide")
 
-st.title("🤖 AI JD Generator Agent")
-st.markdown("URL 하나로 채용 공고를 분석하고 최적의 JD를 생성합니다.")
+st.title("📄 지원 합격 확률을 높여주는 AI")
+
+st.markdown("""
+URL 하나 넣으면
+
+✔ 채용공고 문제점 분석  
+✔ 더 좋은 JD 자동 생성  
+✔ 내 이력서와 적합도 분석  
+✔ 자기소개서 자동 생성  
+지원 성공 확률을 높여주는 AI 에이전트가 알아서 척척 해줍니다!
+
+""")
 
 url = st.text_input("🔗 채용 공고 URL 입력")
+
 uploaded_file = st.file_uploader("📄 이력서 PDF 업로드 (선택)", type=["pdf"])
 
 if "analysis_started" not in st.session_state:
